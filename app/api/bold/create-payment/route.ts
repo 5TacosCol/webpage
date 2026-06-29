@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
     }
 
-    const apiKey = process.env.BOLD_API_KEY
+    const apiKey = process.env.NEXT_PUBLIC_BOLD_API_KEY
     if (!apiKey) {
       return NextResponse.json({ error: 'Bold API key no configurada' }, { status: 500 })
     }
