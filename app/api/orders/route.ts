@@ -23,10 +23,13 @@ export async function POST(req: NextRequest) {
       cilantro: item.cilantro,
       // nachos / quesadillas
       proteins: item.proteins,
-      proteins_cebolla: item.proteins_cebolla,
-      proteins_cilantro: item.proteins_cilantro,
+      pico_de_gallo: item.pico_de_gallo,
       // combos
       combo_tacos: item.combo_tacos,
+      nachos_proteins: item.nachos_proteins,
+      quesadilla_proteins: item.quesadilla_proteins,
+      salsas: item.salsas,
+      notes: item.notes,
     }))
 
     const subtotal = orderItems.reduce((sum, i) => sum + i.subtotal, 0)
