@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useState } from 'react'
 
 interface Props {
   orderId: string
@@ -8,39 +8,45 @@ interface Props {
   amount: number
 }
 
-declare global {
-  interface Window {
-    bold?: {
-      checkout: {
-        render: (config: object) => void
-      }
+export default function BoldPayButton({ orderId, orderNumber, amount }: Props) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handlePay() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/bold/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, order_number: orderNumber, amount }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al iniciar el pago')
+      window.location.href = data.url
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error desconocido')
+      setLoading(false)
     }
   }
-}
 
-export default function BoldPayButton({ orderId, orderNumber, amount }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const script = document.createElement('script')
-    script.src = 'https://checkout.bold.co/library/boldPaymentButton.js'
-    script.async = true
-    script.onload = () => {
-      if (window.bold && containerRef.current) {
-        window.bold.checkout.render({
-          containerId: 'bold-checkout-container',
-          apiKey: process.env.NEXT_PUBLIC_BOLD_API_KEY,
-          orderId,
-          amount: amount * 100,
-          currency: 'COP',
-          description: `Pedido #${String(orderNumber).padStart(3, '0')} - 5 Tacos Pereira`,
-          redirectionUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/success?order_id=${orderId}`,
-        })
-      }
-    }
-    document.body.appendChild(script)
-    return () => { document.body.removeChild(script) }
-  }, [orderId, orderNumber, amount])
-
-  return <div id="bold-checkout-container" ref={containerRef} className="mt-4" />
+  return (
+    <div className="space-y-3">
+      <button
+        onClick={handlePay}
+        disabled={loading}
+        className="w-full bg-dorado text-verde-oscuro font-display text-2xl py-4 rounded-xl hover:brightness-110 transition-all disabled:opacity-60 flex items-center justify-center gap-3"
+      >
+        {loading ? (
+          <>
+            <span className="animate-spin">⏳</span>
+            CONECTANDO CON BOLD...
+          </>
+        ) : (
+          'PAGAR AHORA 💳'
+        )}
+      </button>
+      {error && <p className="text-red-400 text-sm text-center font-body">{error}</p>}
+    </div>
+  )
 }
