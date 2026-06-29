@@ -18,8 +18,7 @@ export default function CartItem({ item }: Props) {
     // Detalle de combo se muestra línea por línea abajo
   } else if (item.proteins?.length) {
     mods.push(item.proteins.join(' + '))
-    if (item.proteins_cebolla === false) mods.push('sin cebolla')
-    if (item.proteins_cilantro === false) mods.push('sin cilantro')
+    if (item.pico_de_gallo === false) mods.push('sin pico de gallo')
   } else {
     if (item.costra) mods.push('con costra de queso')
     if (item.cebolla === false) mods.push('sin cebolla')
@@ -46,10 +45,7 @@ export default function CartItem({ item }: Props) {
           <ul className="mt-1 space-y-0.5">
             {item.combo_tacos.map((taco, i) => (
               <li key={i} className="text-xs text-white/55 leading-snug">
-                • Taco {i + 1}: {taco.protein}
-                {taco.costra && ' 🧀'}
-                {!taco.cebolla && ', sin cebolla'}
-                {!taco.cilantro && ', sin cilantro'}
+                • Taco {i + 1}: {taco.protein}{taco.costra ? ' 🧀' : ''}
               </li>
             ))}
           </ul>
