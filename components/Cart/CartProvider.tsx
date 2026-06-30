@@ -89,7 +89,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem('5tacos_cart')
-      if (saved) dispatch({ type: 'LOAD', payload: JSON.parse(saved) })
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed?.items)) dispatch({ type: 'LOAD', payload: parsed.items })
     } catch { /* ignore */ }
   }, [])
 
