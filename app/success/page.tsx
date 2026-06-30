@@ -4,11 +4,13 @@ import { buildWhatsAppMessage } from '@/lib/whatsapp'
 import { Order } from '@/types'
 
 interface Props {
-  searchParams: { order_id?: string }
+  searchParams: Promise<{ order_id?: string }> | { order_id?: string }
 }
 
 export default async function SuccessPage({ searchParams }: Props) {
-  const { order_id } = searchParams
+  const params = await Promise.resolve(searchParams)
+  const order_id = params?.order_id
+
   if (!order_id) {
     return (
       <div className="min-h-screen bg-verde-fondo flex items-center justify-center text-center px-4">
@@ -21,21 +23,25 @@ export default async function SuccessPage({ searchParams }: Props) {
   }
 
   const supabase = createClient()
-  const { data: order } = await supabase
+  const { data: order, error } = await supabase
     .from('orders')
     .select('*')
     .eq('id', order_id)
     .single()
 
-  if (!order) {
+  if (error || !order) {
     return (
       <div className="min-h-screen bg-verde-fondo flex items-center justify-center text-center px-4">
-        <h1 className="font-display text-dorado text-4xl">Pedido no encontrado</h1>
+        <div>
+          <h1 className="font-display text-dorado text-4xl mb-4">Pedido no encontrado</h1>
+          <a href="/" className="text-white/70 hover:text-white font-body">Volver al inicio</a>
+        </div>
       </div>
     )
   }
 
   const o = order as Order
+  const items = Array.isArray(o.items) ? o.items : []
   const waUrl = buildWhatsAppMessage(o)
 
   return (
@@ -49,11 +55,10 @@ export default async function SuccessPage({ searchParams }: Props) {
           {o.status === 'paid' ? '✅ Pago confirmado' : '⏳ Pago pendiente de confirmación'}
         </p>
 
-        {/* Resumen */}
         <div className="bg-verde-oscuro rounded-2xl p-5 text-left mb-6">
           <h2 className="font-display text-dorado text-xl mb-3">DETALLE DEL PEDIDO</h2>
-          {o.items.map((item, i) => {
-            const mods = []
+          {items.map((item, i) => {
+            const mods: string[] = []
             if (item.proteins?.length) mods.push(item.proteins.join(' + '))
             if (item.costra) mods.push('con costra')
             return (
