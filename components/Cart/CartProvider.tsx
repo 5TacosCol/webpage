@@ -7,7 +7,7 @@ import {
   useEffect,
   ReactNode,
 } from 'react'
-import { CartItem, Product } from '@/types'
+import { CartItem } from '@/types'
 
 interface CartState {
   items: CartItem[]
@@ -19,6 +19,7 @@ type CartAction =
   | { type: 'INCREMENT'; payload: string }
   | { type: 'DECREMENT'; payload: string }
   | { type: 'CLEAR' }
+  | { type: 'LOAD'; payload: CartItem[] }
 
 function cartKey(item: CartItem): string {
   const proteins = (item.proteins || []).sort().join(',')
@@ -30,6 +31,8 @@ function cartKey(item: CartItem): string {
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
+    case 'LOAD':
+      return { items: action.payload }
     case 'ADD_ITEM': {
       const key = cartKey(action.payload)
       const existing = state.items.find((i) => cartKey(i) === key)
@@ -54,9 +57,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return {
         items: state.items
           .map((i) =>
-            cartKey(i) === action.payload
-              ? { ...i, quantity: i.quantity - 1 }
-              : i
+            cartKey(i) === action.payload ? { ...i, quantity: i.quantity - 1 } : i
           )
           .filter((i) => i.quantity > 0),
       }
@@ -82,24 +83,23 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, { items: [] }, (initial) => {
-    if (typeof window === 'undefined') return initial
-    try {
-      const saved = sessionStorage.getItem('5tacos_cart')
-      return saved ? JSON.parse(saved) : initial
-    } catch {
-      return initial
-    }
-  })
+  // Always start empty — load from sessionStorage after hydration to avoid mismatch
+  const [state, dispatch] = useReducer(cartReducer, { items: [] })
 
   useEffect(() => {
-    sessionStorage.setItem('5tacos_cart', JSON.stringify(state))
+    try {
+      const saved = sessionStorage.getItem('5tacos_cart')
+      if (saved) dispatch({ type: 'LOAD', payload: JSON.parse(saved) })
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('5tacos_cart', JSON.stringify(state))
+    } catch { /* ignore */ }
   }, [state])
 
-  const total = state.items.reduce(
-    (sum, i) => sum + i.unit_price * i.quantity,
-    0
-  )
+  const total = state.items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0)
   const count = state.items.reduce((sum, i) => sum + i.quantity, 0)
 
   return (
