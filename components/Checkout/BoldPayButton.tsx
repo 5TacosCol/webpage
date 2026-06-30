@@ -6,9 +6,10 @@ interface Props {
   orderId: string
   orderNumber: number
   amount: number
+  integritySignature: string | null
 }
 
-export default function BoldPayButton({ orderId, orderNumber, amount }: Props) {
+export default function BoldPayButton({ orderId, orderNumber, amount, integritySignature }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -28,14 +29,16 @@ export default function BoldPayButton({ orderId, orderNumber, amount }: Props) {
 
     const script = document.createElement('script')
     script.src = 'https://checkout.bold.co/library/boldPaymentButton.js'
-    script.setAttribute('data-bold-button', '')
+    script.setAttribute('data-bold-button', 'dark-L')
     script.setAttribute('data-api-key', apiKey)
+    script.setAttribute('data-order-id', orderId)
     script.setAttribute('data-amount', String(Math.round(amount)))
     script.setAttribute('data-currency', 'COP')
     script.setAttribute('data-description', description)
     script.setAttribute('data-redirection-url', redirectionUrl)
-    script.setAttribute('data-order-id', `5T-${String(orderNumber).padStart(3, '0')}`)
-    script.setAttribute('data-color', 'dark')
+    if (integritySignature) {
+      script.setAttribute('data-integrity-signature', integritySignature)
+    }
 
     script.onload = () => setLoaded(true)
     script.onerror = () => setError('No se pudo cargar el botón de pago de Bold.')

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { CartItem, OrderItem } from '@/types'
+import crypto from 'crypto'
+
+function boldIntegrityHash(orderId: string, amount: number, currency: string, secret: string): string {
+  const raw = `${orderId}${amount}${currency}${secret}`
+  return crypto.createHash('sha256').update(raw).digest('hex')
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,14 +23,11 @@ export async function POST(req: NextRequest) {
       quantity: item.quantity,
       unit_price: item.unit_price,
       subtotal: item.unit_price * item.quantity,
-      // tacos individuales
       costra: item.costra,
       cebolla: item.cebolla,
       cilantro: item.cilantro,
-      // nachos / quesadillas
       proteins: item.proteins,
       pico_de_gallo: item.pico_de_gallo,
-      // combos
       combo_tacos: item.combo_tacos,
       nachos_proteins: item.nachos_proteins,
       quesadilla_proteins: item.quesadilla_proteins,
@@ -33,8 +36,7 @@ export async function POST(req: NextRequest) {
     }))
 
     const subtotal = orderItems.reduce((sum, i) => sum + i.subtotal, 0)
-    const delivery_fee = order_type === 'delivery' ? 0 : 0
-    const total = subtotal + delivery_fee
+    const total = subtotal
 
     const supabase = createClient()
     const { data, error } = await supabase
@@ -46,7 +48,7 @@ export async function POST(req: NextRequest) {
         delivery_address: delivery_address || null,
         items: orderItems,
         subtotal,
-        delivery_fee,
+        delivery_fee: 0,
         total,
         status: 'pending',
         notes: notes || null,
@@ -56,7 +58,16 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ order_id: data.id, order_number: data.order_number, total })
+    const integritySignature = process.env.BOLD_INTEGRITY_SECRET
+      ? boldIntegrityHash(data.id, total, 'COP', process.env.BOLD_INTEGRITY_SECRET)
+      : null
+
+    return NextResponse.json({
+      order_id: data.id,
+      order_number: data.order_number,
+      total,
+      integrity_signature: integritySignature,
+    })
   } catch (e: unknown) {
     console.error('[POST /api/orders]', e)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const [form, setForm] = useState<FormState>({ customer_name: '', customer_phone: '', notes: '' })
   const [orderId, setOrderId] = useState<string | null>(null)
   const [orderNumber, setOrderNumber] = useState<number | null>(null)
+  const [integritySignature, setIntegritySignature] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -65,6 +66,7 @@ export default function CheckoutPage() {
       if (!res.ok) throw new Error(data.error || 'Error al crear el pedido')
       setOrderId(data.order_id)
       setOrderNumber(data.order_number)
+      setIntegritySignature(data.integrity_signature ?? null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error desconocido')
     } finally {
@@ -119,7 +121,7 @@ export default function CheckoutPage() {
             {loading ? 'PROCESANDO...' : 'CONTINUAR AL PAGO'}
           </button>
         ) : (
-          <BoldPayButton orderId={orderId} orderNumber={orderNumber!} amount={total} />
+          <BoldPayButton orderId={orderId} orderNumber={orderNumber!} amount={total} integritySignature={integritySignature} />
         )}
       </div>
     </div>
