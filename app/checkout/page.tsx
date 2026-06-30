@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useCart } from '@/components/Cart/CartProvider'
 import CustomerForm from '@/components/Checkout/CustomerForm'
 import OrderTypeSelector from '@/components/Checkout/OrderTypeSelector'
-import BoldPayButton from '@/components/Checkout/BoldPayButton'
+import dynamic from 'next/dynamic'
+const BoldPayButton = dynamic(() => import('@/components/Checkout/BoldPayButton'), { ssr: false })
 import { formatCOP } from '@/lib/format'
 import { useRouter } from 'next/navigation'
 
