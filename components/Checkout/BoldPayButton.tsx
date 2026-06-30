@@ -34,7 +34,7 @@ export default function BoldPayButton({ orderId, orderNumber, amount }: Props) {
     script.setAttribute('data-currency', 'COP')
     script.setAttribute('data-description', description)
     script.setAttribute('data-redirection-url', redirectionUrl)
-    script.setAttribute('data-order-id', orderId)
+    script.setAttribute('data-order-id', `5T-${String(orderNumber).padStart(3, '0')}`)
     script.setAttribute('data-color', 'dark')
 
     script.onload = () => setLoaded(true)
