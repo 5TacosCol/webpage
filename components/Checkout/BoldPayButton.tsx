@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   orderId: string
@@ -8,54 +8,64 @@ interface Props {
   amount: number
 }
 
-export default function BoldPayButton({ orderId, orderNumber, amount }: Props) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [boldDetail, setBoldDetail] = useState<unknown>(null)
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    bold?: any
+  }
+}
 
-  async function handlePay() {
-    setLoading(true)
-    setError(null)
-    setBoldDetail(null)
+export default function BoldPayButton({ orderId, orderNumber, amount }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const existing = document.querySelector('script[data-bold-script]')
+    if (existing) {
+      renderButton()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://checkout.bold.co/library/boldPaymentButton.js'
+    script.async = true
+    script.setAttribute('data-bold-script', '1')
+    script.onload = () => renderButton()
+    script.onerror = () => setError('No se pudo cargar el módulo de pago de Bold.')
+    document.body.appendChild(script)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function renderButton() {
     try {
-      const res = await fetch('/api/bold/create-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, order_number: orderNumber, amount }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setBoldDetail(data.detail ?? null)
-        throw new Error(data.error || 'Error al iniciar el pago')
+      if (!window.bold?.checkout?.render) {
+        setError('Bold no está disponible. Intenta recargar la página.')
+        return
       }
-      window.location.href = data.url
+      window.bold.checkout.render({
+        containerId: 'bold-checkout-container',
+        apiKey: process.env.NEXT_PUBLIC_BOLD_API_KEY,
+        orderId,
+        amount,
+        currency: 'COP',
+        description: `Pedido #${String(orderNumber).padStart(3, '0')} - 5 Tacos Pereira`,
+        redirectionUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://5tacos.co'}/success?order_id=${orderId}`,
+      })
+      setReady(true)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error desconocido')
-      setLoading(false)
+      setError(e instanceof Error ? e.message : 'Error al cargar el botón de pago.')
     }
   }
 
   return (
     <div className="space-y-3">
-      <button
-        onClick={handlePay}
-        disabled={loading}
-        className="w-full bg-dorado text-verde-oscuro font-display text-2xl py-4 rounded-xl hover:brightness-110 transition-all disabled:opacity-60 flex items-center justify-center gap-3"
-      >
-        {loading ? (
-          <>
-            <span className="animate-spin">⏳</span>
-            CONECTANDO CON BOLD...
-          </>
-        ) : (
-          'PAGAR AHORA 💳'
-        )}
-      </button>
-      {error && <p className="text-red-400 text-sm text-center font-body">{error}</p>}
-      {boldDetail && (
-        <pre className="text-xs text-red-300 bg-black/30 rounded p-3 overflow-auto max-h-40 font-mono">
-          {JSON.stringify(boldDetail, null, 2)}
-        </pre>
+      {!ready && !error && (
+        <p className="text-white/50 text-sm text-center font-body animate-pulse">Cargando pasarela de pago...</p>
+      )}
+      <div id="bold-checkout-container" ref={containerRef} className="mt-2" />
+      {error && (
+        <p className="text-red-400 text-sm text-center font-body">{error}</p>
       )}
     </div>
   )
